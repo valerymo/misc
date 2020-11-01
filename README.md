@@ -13,7 +13,10 @@ Idea is following:
 
 Notes. solution for Big Data need work with DB, as The Collection of Json records could be also huge. Or probably it should ve return as events.
 
+7. Helm for deployment - included
+8. Dockerfile for image creation - included
+
 Thank you Reali for interesting Task,
-Unfortunately have no enough time.
+Unfortunately - not enough time for me.
 Thanks & Regards,
 Valery
