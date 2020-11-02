@@ -15,9 +15,10 @@ Idea is following:
 			* Create new file and continue write to it
 			.....
 
+
+3. Helm for deployment - included
+4. Dockerfile for image creation - included
+
 TODO:  
     - csvLineToJson(String line)  
 	- printJSON(...)
-
-7. Helm for deployment - included
-8. Dockerfile for image creation - included
