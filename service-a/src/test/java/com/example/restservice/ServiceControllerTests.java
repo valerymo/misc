@@ -38,7 +38,7 @@ public class ServiceControllerTests {
 	public void noParamHelloShouldReturnDefaultMessage() throws Exception {
 
 		this.mockMvc.perform(get("/hello")).andDo(print()).andExpect(status().isOk())
-				.andExpect(jsonPath("$.content").value("Hello, Bitcoin!"));
+				.andExpect(jsonPath("$.content").value("Hello, FeatureCollection!"));
 	}
 
 	@Test

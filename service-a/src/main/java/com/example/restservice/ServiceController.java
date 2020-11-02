@@ -21,17 +21,16 @@ public class ServiceController {
 	
 	@GetMapping("/listings")
 	///listings?min_price=100000&max_price=200000&min_bed=2&max_bed=2&min_bath=2&ma
-	public void startBitcoinCheck(	@RequestParam(required = false) String min_price,
+	public void startProcessing(	@RequestParam(required = false) String min_price,
 									@RequestParam(required = false) String max_price,
 									@RequestParam(required = false) String min_bed,
 									@RequestParam(required = false) String max_bed,
 									@RequestParam(required = false) String min_bath,
 									@RequestParam(required = false) String max_bath) {
-			System.out.println("BitcoinPrice monitoring started. Printing in USD:");	
+			System.out.println("Start Processing ...");	
 			ProcessingCsvWebFile csvProcessor = new ProcessingCsvWebFile();
 			try {
 				csvProcessor.run(min_price,max_price,min_bed, max_bed, min_bath, max_bath);
-								 );
 	        } catch (Exception e) {
 	            e.printStackTrace();
 	        }
