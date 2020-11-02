@@ -21,7 +21,7 @@ spec:
       - backend:
           serviceName: {{ $serviceName }}
           servicePort: {{ $servicePort }}
-        path: /
+        path: /csv-fileter/(.*)
   {{- if .Values.ingress.tls }}
   tls:
 {{ toYaml .Values.ingress.tls | indent 4 }}

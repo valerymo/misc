@@ -3,8 +3,8 @@
 # Declare variables to be passed into your templates.
 replicaCount: 1
 image:
-  repository: valerym1/service-a
-  tag: 0.1.3
+  repository: valerym1/service-a-csv-filter
+  tag: 0.1.0
   pullPolicy: IfNotPresent
 service:
   name: service-a

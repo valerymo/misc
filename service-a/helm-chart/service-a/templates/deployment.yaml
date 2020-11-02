@@ -16,12 +16,19 @@ spec:
         app: {{ template "service-a.name" . }}
         release: {{ .Release.Name }}
     spec:
+      volumes:
+        - name: task-pv-storage
+          persistentVolumeClaim:
+            claimName: task-pv-claim
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.internalPort }}
+          volumeMounts:
+            - mountPath: "mystorage"
+              name: task-pv-storage
           livenessProbe:
             httpGet:
               path: /actuator/health

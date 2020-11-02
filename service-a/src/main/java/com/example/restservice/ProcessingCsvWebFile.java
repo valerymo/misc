@@ -48,7 +48,7 @@ public class ProcessingCsvWebFile  {
 		String uri = "https://server-assignment.s3.amazonaws.com/listing-details.csv";
 		try {
 			//Download file from web and save on disk	
-			String downloadedFileFullName = "target/listing-detailsXXX.csv";
+			String downloadedFileFullName = "mystorage/listing-detailsXXX.csv";
 			downloadFile(uri, downloadedFileFullName);
 			System.out.print("Downloaded csv File: " + downloadedFileFullName +"\n");
 			JSONObject jsonTempl = createJsonTemplate();
