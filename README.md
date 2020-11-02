@@ -1,4 +1,8 @@
-# Reali Engineering Problem (first working version)
+# Task - application that returns a filtered set of listings from csv web file (first working version) 
+
+Input file:  https://server-assignment.s3.amazonaws.com/listing-details.csv   
+API sample: GET /listings?min_price=100000&max_price=200000&min_bed=2&max_bed=2&min_bath=2&max_bath=2  
+
 
 Suggested solution is intended for processing Big Files.
 Basic flow is following:
