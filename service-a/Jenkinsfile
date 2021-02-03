@@ -20,7 +20,8 @@ pipeline {
     stages {
         stage('Pull') {
             steps {
-                git url: 'https://github.com/valerymo/misc.git'
+				git branch: 'main',
+                url: 'https://github.com/valerymo/misc.git'
             } 
         }
 
