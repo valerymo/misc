@@ -1,0 +1,52 @@
+pipeline {
+    parameters { 
+
+        string(
+            name: 'RELEASE_DIR', 
+            defaultValue: '/home/samples',
+            description: 'sample'
+            )
+
+        // string(
+        //     name: 'Time_out', 
+        //     defaultValue: '11000',
+        //     description: 'Time out in second for the job'
+        //     )
+
+
+    agent any
+
+
+    options {
+        ansiColor('xterm')
+    }
+
+    stages {
+         stage('Pull') {
+             steps {
+                 dir ('misc')
+                 {
+                 git branch: 'master',
+                 //credentialsId: '001',
+                 url: 'https://github.com/valerymo/misc.git'
+                 //sh "cd .."
+                 } 
+             }
+         } 
+
+        stage('Run something') {
+            steps {
+                script {
+                    try {
+                        sh  ("Hello Jenkins Pipeline" )
+                        } 
+                    catch (Exception e) {
+                        sh ("echo Failed}")
+                        currentBuild.result = 'FAILURE'
+                    }
+                }
+
+            }
+        }
+    }
+}
