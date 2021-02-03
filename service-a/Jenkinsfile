@@ -26,7 +26,7 @@ pipeline {
              steps {
                  dir ('misc')
                  {
-                 git branch: 'master',
+                 //git branch: 'master',
                  //credentialsId: '001',
                  url: 'https://github.com/valerymo/misc.git'
                  //sh "cd .."
