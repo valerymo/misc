@@ -27,7 +27,13 @@ pipeline {
 
         stage('Build') {
             steps {
-				sh 'mvn clean install'
+				sh "pwd"
+				dir (service-a)
+				{
+					sh "pwd"
+					sh 'mvn clean install'
+					sh "cd .."					
+				}
             }
         }
     }
