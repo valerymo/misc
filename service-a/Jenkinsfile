@@ -1,42 +1,33 @@
 pipeline {
     agent any
-    parameters { 
+    // parameters { 
 
-        string(
-            name: 'RELEASE_DIR', 
-            defaultValue: '/home/samples',
-            description: 'sample'
-            )
+    //     string(
+    //         name: 'RELEASE_DIR', 
+    //         defaultValue: '/home/samples',
+    //         description: 'sample'
+    //         )
 
-        // string(
-        //     name: 'Time_out', 
-        //     defaultValue: '11000',
-        //     description: 'Time out in second for the job'
-        //     )
+    //     // string(
+    //     //     name: 'Time_out', 
+    //     //     defaultValue: '11000',
+    //     //     description: 'Time out in second for the job'
+    //     //     )
 
-	}
+	// }
 
 
     stages {
-        stage('Pull') {
+        stage('Clone sources') {
             steps {
 				git branch: 'main',
                 url: 'https://github.com/valerymo/misc.git'
             } 
         }
 
-        stage('Run something') {
+        stage('Build') {
             steps {
-                script {
-                    try {
-                        sh  ("Hello Jenkins Pipeline" )
-                        } 
-                    catch (Exception e) {
-                        sh ("echo Failed}")
-                        currentBuild.result = 'FAILURE'
-                    }
-                }
-
+				sh 'mvn clean install'
             }
         }
     }
