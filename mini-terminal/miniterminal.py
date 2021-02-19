@@ -1,10 +1,10 @@
 #!/usr/bin/python
 
 from cmd import Cmd
+import csv
 import logging
 import operator
 import os
-#import os.path
 from os import walk
 import shutil
 import time
@@ -151,31 +151,57 @@ class StatProcessor:
         return ts
 
     def process_stat(self, path_to_folder, path_to_csv, ts):
-        log_dir = path_to_folder + os.path.sep + "logs" + os.path.sep
-        sortedlogs_all = self.utils.sorted_ls(log_dir)
-        logging.debug("sortedfiles_all: " + str(sortedlogs_all))
-        logs_after_ts = []
-        for f in sortedlogs_all:
-            if str(f).split(".")[2] > str(ts):
-                logs_after_ts.append(f)
-        logging.debug("logs_after_ts: " + str(logs_after_ts))
-        #analyze logs
-        failed_sort=failed_clean=failed_stat=failed_script=0
-        used_sort = used_clean = used_stat = used_script = 0
-        failed_map = {'sort':0, 'clean':0, 'stat':0, 'script':0}
-        used_map = {'sort':0, 'clean':0, 'stat':0, 'script':0}
-        for file in logs_after_ts:
-            file_pref = str(file).split(".")[0]
-            used_map[file_pref] += 1
-            file_path = log_dir + file
-            f = open(file_path, "r")
-            if 'Status: False' in f.read():
-                failed_map [file_pref] += 1
+        logging.debug("StatProcessor.process_stat()")
+        try:
+            log_dir = path_to_folder + os.path.sep + "logs" + os.path.sep
+            sortedlogs_all = self.utils.sorted_ls(log_dir)
+            logging.debug("sortedfiles_all: " + str(sortedlogs_all))
+            logs_after_ts = []
+            for f in sortedlogs_all:
+                if str(f).split(".")[2] > str(ts):
+                    logs_after_ts.append(f)
+            logging.debug("logs_after_ts: " + str(logs_after_ts))
+            #analyze logs
+            failed_map = {'sort':0, 'clean':0, 'stat':0, 'script':0}
+            used_map = {'sort':0, 'clean':0, 'stat':0, 'script':0}
+            fails_count = 0
+            for file in logs_after_ts:
+                file_pref = str(file).split(".")[0]
+                logging.debug("file: " + file + " file_prefix: " + file_pref)
+                used_map[file_pref] += 1
+                file_path = log_dir + file
+                f = open(file_path, "r")
+                if 'Status: False' in f.read():
+                    failed_map [file_pref] += 1
+                    fails_count += 1
+                f.close()
+            most_used = least_used = most_failed = ""
+            if len(logs_after_ts) > 1:
+                most_used = max(used_map.items(), key=operator.itemgetter(1))[0] # need fix, as could be more than one
+                least_used = min(used_map.items(), key=operator.itemgetter(1))[0] # need fix, as could be more than one
+                if (fails_count > 0):
+                    most_failed = max(failed_map.items(), key=operator.itemgetter(1))[0] # need fix, as could be more than one
+            logging.debug("\nmost_used: " + str(most_used) + "\nleast_used: " + str(least_used) + "\nmost_failed: " + most_failed)
+            #create/write cvs file
+            self.create_csv_stat_file(path_to_csv, most_used, least_used, most_failed)
+        except AssertionError as error:
+            logging.error("StatProcessor.stat()")
+            self.utils.logs("Script", False, "Error in ScriptProcessor.script()")
+
+    def create_csv_stat_file(self, path_to_csv, most_used, least_used, most_failed):
+        try:
+            ts = str(time.time()).split(".")[0]
+            header = ['Timestamp', 'Most used', 'Least used', 'Most failed']
+            csv_file = path_to_csv + os.path.sep + "stat.csv"
+            f = open(csv_file, "w+")
+            writer = csv.writer(f, delimiter=',')
+            writer.writerow(header)
+            line = [str(ts), str(most_used), str(least_used), str(most_failed)]
+            writer.writerow(line)
             f.close()
-        most_used = max(used_map.items(), key=operator.itemgetter(1))[0]
-        least_used = min(used_map.items(), key=operator.itemgetter(1))[0]
-        most_failed = max(failed_map.items(), key=operator.itemgetter(1))[0]
-        logging.debug("\nmost_used: " + str(most_used) + "\nleast_used: " + str(least_used) + "\nmost_failed: " + most_failed)
+        except AssertionError as error:
+            logging.error("StatProcessor.create_csv_stat_file()")
+            self.utils.logs("Script", False, "Error in ScriptProcessor.create_csv_stat_file(): " + str(error))
 
 
 
@@ -215,7 +241,6 @@ class SortProcessor:
                 logging.info("Error parsing sort parameters")
                 return
             fname = os.path.basename(path_to_hash)
-            ffullname = path_to_folder + os.path.sep + fname
             self.create_dirs(["csv", "mat", "dxl"], path_to_folder) #create dirs for sorting files
             _, _, fileslist = next(walk(path_to_folder))
             logging.debug("fileslist: " + str(fileslist))
@@ -283,24 +308,6 @@ class SortProcessor:
         f.write("dxl: " + str(count_dxl) +"\n")
         f.close()
 
-    # def logs(self, status, count_csv, count_mat, count_dxl):
-    #     # logfile located in current dir - where script was executed from
-    #     ts = time.time()
-    #     log_dir_path = os.getcwd() + os.path.sep + "logs"
-    #     if not os.path.exists(log_dir_path):
-    #         os.mkdir(log_dir_path)
-    #     logfile = log_dir_path + os.path.sep + "sort.log." + str(ts)
-    #     f = open(logfile, "w+")
-    #     f.write("Command: " + str("Sort") + "\n")
-    #     f.write("Time: " + str(ts) + "\n")
-    #     f.write("Status: " + str(status) + "\n")
-    #     if status:
-    #         f.write("csv: " + str(count_csv) + "\n")
-    #         f.write("mat: " + str(count_mat) + "\n")
-    #         f.write("dxl: " + str(count_dxl) + "\n")
-    #     f.close()
-
-
 
 
 class MiniTerminal(Cmd):
@@ -359,12 +366,4 @@ class MiniTerminal(Cmd):
 
 
 if __name__ == '__main__':
-    #MiniTerminal().cmdloop()
     main()
-################################
-
-# Press the green button in the gutter to run the script.
-# if __name__ == '__main__':
-#     print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
