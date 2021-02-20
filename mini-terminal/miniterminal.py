@@ -2,18 +2,16 @@
 
 from cmd import Cmd
 import csv
+import json
 import logging
 import operator
 import os
-from os import walk
 import shutil
 import time
 
+logging.basicConfig(level=logging.INFO)
+INPUT_FILE = "input.json"
 
-logging.basicConfig(level=logging.DEBUG)
-
-### CONF - will be move to json file:
-MAX_NUM_OF_LOG_FILES = 3
 
 def main():
     logging.debug("main")
@@ -31,7 +29,7 @@ class Utils:
             full_dir_path = os.path.abspath(os.getcwd()) + os.path.sep + path
         logging.debug("full_dir_path: " + full_dir_path)
         if not os.path.exists(full_dir_path) or not os.path.isdir(full_dir_path):
-            logging.info("Directory Path does not exists: " + full_dir_path)
+            logging.error("Directory Path does not exists: " + full_dir_path)
             return False
         else:
             return True
@@ -61,18 +59,22 @@ class Utils:
 
 
 class CleanProcessor:
-    logging.debug("class Clean")
-    utils = Utils()
+    def __init__(self, input_params):
+        logging.debug("class CleanProcessor")
+        self.input_params = input_params
+        self.utils = Utils()
 
     def help(self):
         command = "USAGE: clean <path/to/folder>"
-        print (command)
+        print(command)
 
     def clean(self, args):
         logging.debug("CleanProcessor.clean()")
         try:
             logging.debug("args: " + args)
-            logdir_path = self.process_args(args)
+            valid, logdir_path = self.process_args(args)
+            if not valid:
+                return
             self.check_files_limit_remove_oldest(logdir_path)
             self.utils.logs("Clean", True, "")
         except AssertionError:
@@ -81,23 +83,25 @@ class CleanProcessor:
 
     def process_args(self, argsline):
         logging.debug("CleanProcessor.process_args()")
-        list = argsline.split()
-        print ("list: ", list)
-        if (len(list)!= 1):
+        args_list = argsline.split()
+        logging.debug("args_list: " +  str(args_list))
+        if (len(args_list) != 1):
             self.help()
-            return "-1"
+            self.utils.logs("Clean", False, "Wrong parameters")
+            return 0,0
         else:
-            logdir_path = list[0] + os.path.sep + "logs" + os.path.sep
+            logdir_path = args_list[0] + os.path.sep + "logs" + os.path.sep
             logging.debug("logdir_path: " + logdir_path)
             if (self.utils.check_folder_exists(logdir_path) == False):
-                logging.debug("Directory does not exists: " + logdir_path)
-                return "-1"
-            return logdir_path
+                self.utils.logs("Clean", False, "Directory does not exists: " + logdir_path)
+                return 0,0
+            return 1, logdir_path
 
     def check_files_limit_remove_oldest(self, logdir_path):
         logging.debug("CleanProcessor.check_threshhold_and_remove_oldest()")
         logging.debug("logdir_path: " + str(logdir_path))
-        del_list = self.sorted_ls(logdir_path)[0:(len(self.sorted_ls(logdir_path)) - MAX_NUM_OF_LOG_FILES)]
+        max_num_files = int(self.input_params.get('MAX_NUM_OF_LOG_FILES'))
+        del_list = self.sorted_ls(logdir_path)[0:(len(self.sorted_ls(logdir_path)) - max_num_files)]
         for dfile in del_list:
             os.remove(logdir_path + dfile)
 
@@ -112,13 +116,15 @@ class StatProcessor:
 
     def help(self):
         command = "USAGE: stat <path/to/folder> --csv=<path/to/hash> --ts=<timestamp>"
-        print (command)
+        print(command)
 
     def stat(self, args):
         logging.debug("StatProcessor.stat()")
         try:
             logging.debug("args: " + args)
-            path_to_folder, path_to_csv, ts = self.process_args(args)
+            valid, path_to_folder, path_to_csv, ts = self.process_args(args)
+            if not valid:
+                return
             self.process_stat(path_to_folder, path_to_csv, ts)
             self.utils.logs("Stat", True, "")
         except AssertionError as error:
@@ -127,20 +133,21 @@ class StatProcessor:
 
     def process_args(self, argsline):
         logging.debug("StatProcessor.process_args()")
-        list = argsline.split()
-        logging.debug("args list: " + str(list))
-        if ((len(list)!= 3) or (list[1].find('--csv=',0) == -1) or (list[2].find('--ts=',0) == -1)):
+        args_list = argsline.split()
+        logging.debug("args args_list: " + str(args_list))
+        if ((len(args_list) != 3) or (args_list[1].find('--csv=', 0) == -1) or (args_list[2].find('--ts=', 0) == -1)):
             self.help()
-            return "-1", "-1", "-1"
+            self.utils.logs("Stat", False, "Wrong parameters")
+            return 0, 0, 0, 0
         else:
-            pathtofolder = list[0]
-            pathtocsv = list[1]
+            pathtofolder = args_list[0]
+            pathtocsv = args_list[1]
             assert self.utils.check_folder_exists(pathtofolder) == True, \
-                    "process_args(): path/to/folder does not exists: " + pathtofolder
-            csvpath = list[1].split("--csv=")[1]
-            ts = self.process_timestamp_param(list[2])
+                "process_args(): path/to/folder does not exists: " + pathtofolder
+            csvpath = args_list[1].split("--csv=")[1]
+            ts = self.process_timestamp_param(args_list[2])
             logging.debug("pathtofolder: " + pathtofolder + " , csvpath: " + csvpath + " , timestamp: " + str(ts))
-            return pathtofolder, csvpath, ts
+            return 1, pathtofolder, csvpath, ts
 
     def process_timestamp_param(self, timestamp_param):
         assert str(timestamp_param).find('--ts=', 0) != -1, \
@@ -161,9 +168,9 @@ class StatProcessor:
                 if str(f).split(".")[2] > str(ts):
                     logs_after_ts.append(f)
             logging.debug("logs_after_ts: " + str(logs_after_ts))
-            #analyze logs
-            failed_map = {'sort':0, 'clean':0, 'stat':0, 'script':0}
-            used_map = {'sort':0, 'clean':0, 'stat':0, 'script':0}
+            # analyze logs
+            failed_map = {'sort': 0, 'clean': 0, 'stat': 0, 'script': 0}
+            used_map = {'sort': 0, 'clean': 0, 'stat': 0, 'script': 0}
             fails_count = 0
             for file in logs_after_ts:
                 file_pref = str(file).split(".")[0]
@@ -172,77 +179,64 @@ class StatProcessor:
                 file_path = log_dir + file
                 f = open(file_path, "r")
                 if 'Status: False' in f.read():
-                    failed_map [file_pref] += 1
+                    failed_map[file_pref] += 1
                     fails_count += 1
                 f.close()
             most_used = least_used = most_failed = ""
             if len(logs_after_ts) > 1:
-                most_used = max(used_map.items(), key=operator.itemgetter(1))[0] # need fix, as could be more than one
-                least_used = min(used_map.items(), key=operator.itemgetter(1))[0] # need fix, as could be more than one
+                most_used = max(used_map.items(), key=operator.itemgetter(1))[0]  # need fix, as could be more than one
+                least_used = min(used_map.items(), key=operator.itemgetter(1))[0]  # need fix, as could be more than one
                 if (fails_count > 0):
-                    most_failed = max(failed_map.items(), key=operator.itemgetter(1))[0] # need fix, as could be more than one
-            logging.debug("\nmost_used: " + str(most_used) + "\nleast_used: " + str(least_used) + "\nmost_failed: " + most_failed)
-            #create/write cvs file
-            self.create_csv_stat_file(path_to_csv, most_used, least_used, most_failed)
+                    most_failed = max(failed_map.items(), key=operator.itemgetter(1))[
+                        0]  # need fix, as could be more than one
+            logging.debug(
+                "\nmost_used: " + str(most_used) + "\nleast_used: " + str(least_used) + "\nmost_failed: " + most_failed)
+            # create/write cvs file
+            self.create_append_csv_stat_file(path_to_csv, most_used, least_used, most_failed)
         except AssertionError as error:
             logging.error("StatProcessor.stat()")
             self.utils.logs("Script", False, "Error in ScriptProcessor.script()")
 
-    def create_csv_stat_file(self, path_to_csv, most_used, least_used, most_failed):
+    def create_append_csv_stat_file(self, path_to_csv, most_used, least_used, most_failed):
         try:
             ts = str(time.time()).split(".")[0]
-            header = ['Timestamp', 'Most used', 'Least used', 'Most failed']
             csv_file = path_to_csv + os.path.sep + "stat.csv"
-            f = open(csv_file, "w+")
+            csv_exist = True
+            if not os.path.exists(csv_file):
+                header = ['Timestamp', 'Most used', 'Least used', 'Most failed']
+                csv_exist = False
+            f = open(csv_file, "a+")
             writer = csv.writer(f, delimiter=',')
-            writer.writerow(header)
+            if not csv_exist:
+                writer.writerow(header)
+                os.chmod(csv_file, 0o777)
             line = [str(ts), str(most_used), str(least_used), str(most_failed)]
             writer.writerow(line)
             f.close()
         except AssertionError as error:
-            logging.error("StatProcessor.create_csv_stat_file()")
-            self.utils.logs("Script", False, "Error in ScriptProcessor.create_csv_stat_file(): " + str(error))
-
-
-
-class ScriptProcessor:
-    logging.debug("class ScriptProcessor")
-    utils = Utils()
-
-    def help(self):
-        command = "USAGE: script --script=<path/to/script>"
-        print (command)
-
-    def script(self, args):
-        logging.debug("ScriptProcessor.script()")
-        try:
-            self.utils.logs("Script", True, "")
-        except AssertionError:
-            logging.error("StatProcessor.stat()")
-            self.utils.logs("Script", False, "Error in ScriptProcessor.script()")
+            logging.error("StatProcessor.create_append_csv_stat_file()")
+            self.utils.logs("Script", False, "Error in ScriptProcessor.create_append_csv_stat_file(): " + str(error))
 
 
 class SortProcessor:
-    #def __init__(self):
     logging.debug("class Sort")
     utils = Utils()
 
     def help(self):
         command = "USAGE: sort <path/to/folder> --hash=<path/to/hash>"
-        print (command)
+        print(command)
 
     def sort(self, args):
         logging.debug("SortProcessor.sort()")
         try:
             logging.debug("args: " + args)
-            path_to_folder, path_to_hash = self.process_args(args)
-            logging.debug("path_to_folder: " + path_to_folder + ", path_to_hash: " + path_to_hash)
-            if path_to_folder == "-1":
-                logging.info("Error parsing sort parameters")
+            valid, path_to_folder, path_to_hash = self.process_args(args)
+            #logging.debug("path_to_folder: " + path_to_folder + ", path_to_hash: " + path_to_hash)
+            if not valid:
                 return
             fname = os.path.basename(path_to_hash)
-            self.create_dirs(["csv", "mat", "dxl"], path_to_folder) #create dirs for sorting files
-            _, _, fileslist = next(walk(path_to_folder))
+            self.create_dirs(["csv", "mat", "dxl"], path_to_folder)  # create dirs for sorting files
+            _, _, fileslist = next(os.walk(path_to_folder))
             logging.debug("fileslist: " + str(fileslist))
             count_csv, count_mat, count_dxl = self.sort_move_files_to_dirs(fileslist, path_to_folder)
             fname = os.path.basename(path_to_hash)
@@ -255,20 +249,21 @@ class SortProcessor:
 
     def process_args(self, argsline):
         logging.debug("SortProcessor.process_args()")
-        list = argsline.split()
-        print ("list: ", list)
-        if ((len(list)!= 2) or (list[1].find('--hash=',0) == -1)):
+        args_list = argsline.split()
+        logging.debug("args_list: " + str(args_list))
+        if ((len(args_list) != 2) or (args_list[1].find('--hash=', 0) == -1)):
             self.help()
-            return "-1", "-1"
+            self.utils.logs("Sort", False, "Wrong parameters")
+            return 0,0,0
         else:
-            pathtofolder = list[0]
+            pathtofolder = args_list[0]
             logging.debug("pathtofolder: " + pathtofolder)
             assert self.utils.check_folder_exists(pathtofolder) == True, \
-                        "process_args(): path/to/folder does not exists: " + pathtofolder
-            hasharg = list[1].split("--hash=")
+                "process_args(): path/to/folder does not exists: " + pathtofolder
+            hasharg = args_list[1].split("--hash=")
             hashpath = hasharg[1]
             logging.debug("hashpath: " + hashpath)
-            return pathtofolder, hashpath
+            return 1, pathtofolder, hashpath
 
     def create_dirs(self, list, path_to_folder):
         for dir in list:
@@ -289,7 +284,7 @@ class SortProcessor:
                 logging.debug("file_extension: " + file_extension)
                 if file_extension == '.csv':
                     shutil.move(f, 'csv')
-                    count_csv +=1
+                    count_csv += 1
                 elif file_extension == '.mat':
                     shutil.move(f, 'mat')
                     count_mat += 1
@@ -303,19 +298,68 @@ class SortProcessor:
 
     def write_hash_file(self, ffullname, count_csv, count_mat, count_dxl):
         f = open(ffullname, "w+")
-        f.write("csv: " + str(count_csv) +"\n")
-        f.write("mat: " + str(count_mat) +"\n")
-        f.write("dxl: " + str(count_dxl) +"\n")
+        f.write("csv: " + str(count_csv) + "\n")
+        f.write("mat: " + str(count_mat) + "\n")
+        f.write("dxl: " + str(count_dxl) + "\n")
         f.close()
 
 
+class ScriptProcessor:
+    def __init__(self, input_params):
+        logging.debug("class ScriptProcessor")
+        self.input_params = input_params
+        self.utils = Utils()
+        self.clean_processor = CleanProcessor(input_params)
+        self.sort_processor = SortProcessor()
+        self.stat_processor = StatProcessor()
+
+    def help(self):
+        command = "USAGE: script --script=<path/to/script>"
+        print(command)
+
+    def script(self, args):
+        logging.debug("ScriptProcessor.script()")
+        try:
+            clean_command_args = self.input_params.get('SCRIPT')[0].get('clean_command_args')
+            sort_command_args = self.input_params.get('SCRIPT')[1].get('sort_command_args')
+            stat_command_args = self.input_params.get('SCRIPT')[2].get('stat_command_args')
+            self.clean_processor.clean(clean_command_args)
+            self.sort_processor.sort(sort_command_args)
+            self.stat_processor.stat(stat_command_args)
+            self.utils.logs("Script", True, "")
+        except AssertionError:
+            logging.error("StatProcessor.stat()")
+            self.utils.logs("Script", False, "Error in ScriptProcessor.script()")
+
+
+def validate_params(input_params):
+    if ((not input_params.get('MAX_NUM_OF_LOG_FILES'))
+            or (not input_params.get('SCRIPT'))):
+        print("Missing mandatory parameter in input file")
+        print("Expected json input file structure sample: ")
+        print("{\n" +
+              "  \"MAX_NUM_OF_LOG_FILES\": \"NUM\",\n" +
+              "  \"SCRIPT\": [\n" +
+              "    {\"clean_command\": \"clean .\"},\n" +
+              "    {\"sort_command\": \"sort test --hash=f1\"},\n" +
+              "    {\"stat_command\": \"stat . --csv=. --ts=1500000000\"}]\n" +
+              "}\n")
+        return False
+    else:
+        return True
+
 
 class MiniTerminal(Cmd):
-    logging.debug("class myterminal")
+    logging.debug("class MiniTerminal")
+
+    with open(INPUT_FILE) as json_file:
+        input_params = json.load(json_file)
+    assert validate_params(input_params) == True, "ERROR in Input parameters validation"
+
     sort_processor = SortProcessor()
-    clean_processor = CleanProcessor()
+    clean_processor = CleanProcessor(input_params)
     stat_processor = StatProcessor()
-    script_processor = ScriptProcessor()
+    script_processor = ScriptProcessor(input_params)
 
     prompt = 'mini> '
     intro = "Welcome! Type ? to list commands"
@@ -328,29 +372,28 @@ class MiniTerminal(Cmd):
         print('exit the application. Shorthand: x q Ctrl-D.')
 
     def do_sort(self, inp):
-        print("do_sort".format(inp))
-        print("inp: ", inp)
+        logging.debug("do_sort")
         self.sort_processor.sort(inp)
 
     def help_sort(self):
         self.sort_processor.help()
 
     def do_clean(self, inp):
-        print("do_clean".format(inp))
+        logging.debug("do_clean")
         self.clean_processor.clean(inp)
 
     def help_clean(self):
         self.clean_processor.help()
 
     def do_stat(self, inp):
-        print("do_stat".format(inp))
+        logging.debug("do_stat")
         self.stat_processor.stat(inp)
 
     def help_stat(self):
         self.stat_processor.help()
 
     def do_script(self, inp):
-        print("do_script".format(inp))
+        logging.debug("do_script")
         self.script_processor.script(inp)
 
     def help_script(self):
@@ -359,7 +402,7 @@ class MiniTerminal(Cmd):
     def default(self, inp):
         if inp == 'x' or inp == 'q':
             return self.do_exit(inp)
-        print("? :".format(inp))
+        print("Available commands: clean, sort, stat, script")
 
     do_EOF = do_exit
     help_EOF = help_exit

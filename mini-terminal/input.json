@@ -1,0 +1,7 @@
+{
+  "MAX_NUM_OF_LOG_FILES": "5",
+  "SCRIPT":[
+      { "clean_command_args":"."},
+      { "sort_command_args":"test --hash=f1"},
+      { "stat_command_args":". --csv=. --ts=1500000000"}]
+}
