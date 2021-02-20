@@ -337,6 +337,25 @@ Results:
     Timestamp,Most used,Least used,Most failed
     1613830088,sort,stat,
 
+### Conditional execution of the commands in Script
+
+In current design the functionality for conditional execution of commands in script
+ could be achived by cleaning specific command parameters.
+For example, for Clean command: *{ "clean_command_args":""}*
+But it impacts on statistics, as command will be considered as failed, 
+and log will be created with failed status, as following:
+  
+    Status: False
+    Error: Wrong parameters
+
+So we suppose that need add enhancement - functionality for conditional execution of commands in script,
+ although it's not signed directly in requirements.
+Changes will be required in *input.json* file and in *ScriptProcessor* class.
+Notes added to [Planned improvements](#planned-improvements) section
+
+
+
+
 
 ## Configuration
 
@@ -390,3 +409,6 @@ These are planning enhansments, known issues, and open items.
 CSV file created  only by *stat* command. 
 4. Discuss - Script command implemented without usage any command line parameter, as it's using input.json. 
    Maybe need clear requiremenets.
+5. Add conditional execution of the commands in the script.  
+	Update input.json, - add *Run* parameter (Y/N) for each command.
+	Update ScriptProcessor class.
