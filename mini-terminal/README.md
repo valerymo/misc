@@ -185,8 +185,7 @@ of oldest logs will be deleted. The command takes the directory as an input.
 
 #### Usage examples
 
-* Logs dir before clean:  
-
+Logs dir before clean:  
 
     $ ls logs/
     clean.log.1613813471   sort.log.1613813471  sort.log.1613818030  sort.log.1613825620
@@ -194,8 +193,7 @@ of oldest logs will be deleted. The command takes the directory as an input.
     script.log.1613813471  sort.log.1613813633  sort.log.1613825613  stat.log.1613818036
 
 
-* Clean:
-
+Clean:
 
     $ python miniterminal.py
     Welcome! Type ? to list commands
@@ -203,14 +201,12 @@ of oldest logs will be deleted. The command takes the directory as an input.
     mini> q
     Bye
 
-
-* Logs dir after clean:
+Logs dir after clean:
 
 
     $ ls logs/
     clean.log.1613826979  sort.log.1613824157  sort.log.1613825620
     sort.log.1613818030   sort.log.1613825613  stat.log.1613818036
-
 
 
 ## Stat
